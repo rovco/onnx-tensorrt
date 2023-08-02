@@ -144,12 +144,12 @@ endif()
 install(TARGETS
                 nvonnxparser
                 nvonnxparser_static
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib/x86_64-linux-gnu
+        ARCHIVE DESTINATION lib/x86_64-linux-gnu
 )
 
 install(FILES ${HEADERS}
-  DESTINATION include
+  DESTINATION include/x86_64-linux-gnu
 )
 
 SET(CPACK_GENERATOR "DEB")
