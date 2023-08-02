@@ -89,6 +89,7 @@ class ImporterContext final : public IImporterContext
     std::string mOnnxFileLocation;       // Keep track of the directory of the parsed ONNX file
     std::unique_ptr<ErrorRecorderWrapper> mErrorWrapper; // error recorder to control TRT errors
     StringMap<nvinfer1::IConstantLayer*> mConstantLayers;
+    nvonnxparser::OnnxParserFlags mOnnxParserFlags; // OnnxParserFlags specified by the parser
 
     //! Stack of names defined by nested ONNX graphs, with information about how to
     //! restore their associated values when popping back to the surrounding scope.
@@ -265,6 +266,16 @@ public:
         }
         return iter->second;
     }
+
+    void setFlags(nvonnxparser::OnnxParserFlags const& onnxParserFlags) override
+    {
+        mOnnxParserFlags = onnxParserFlags;
+    }
+    nvonnxparser::OnnxParserFlags getFlags() const override
+    {
+        return mOnnxParserFlags;
+    }
+
 
 private:
     std::string const& generateUniqueName(std::set<std::string>& namesSet, const std::string& basename)

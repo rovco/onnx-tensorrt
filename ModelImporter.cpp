@@ -543,6 +543,9 @@ Status ModelImporter::importModel(
         _importer_ctx.registerTensor(TensorOrWeights{}, output.name());
     }
 
+    // Propagate OnnxParserFlags down to the importer context.
+    _importer_ctx.setFlags(getFlags());
+
     _current_node = -1;
     CHECK(importInputs(&_importer_ctx, graph, &_importer_ctx.tensors()));
     CHECK(parseGraph(&_importer_ctx, graph, model.producer_name() == "TensorRT", &_current_node));

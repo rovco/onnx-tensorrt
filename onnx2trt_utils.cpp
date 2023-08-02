@@ -1541,6 +1541,87 @@ NodeImportResult lstmLegacyImporter(
     return {outputs};
 }
 
+NodeImportResult nmsPluginHelper(
+    IImporterContext* ctx, const ::ONNX_NAMESPACE::NodeProto& node, std::vector<TensorOrWeights>& inputs)
+{
+    std::vector<nvinfer1::PluginField> f;
+
+    // max_output, iou_threshold and score_threshold must be initializers
+    ASSERT(inputs.size() >= 2 && inputs.size() <= 5 && "The node requires between 2-5 inputs",
+           ErrorCode::kUNSUPPORTED_NODE);
+
+    // Input: boxes
+    nvinfer1::ITensor* boxesTensorPtr = &convertToTensor(inputs.at(0), ctx);
+    ASSERT(boxesTensorPtr->getDimensions().nbDims == 3 && "The boxes tensor must be 3D",
+           ErrorCode::kUNSUPPORTED_NODE);
+
+    // Input: scores
+    nvinfer1::ITensor* scoresTensorPtr = &convertToTensor(inputs.at(1), ctx);
+    ASSERT(scoresTensorPtr->getDimensions().nbDims == 3 && "The scores tensor must be 3D",
+           ErrorCode::kUNSUPPORTED_NODE);
+
+    const int32_t maxOutputBoxesPerClassDefault = 0;
+    const float iouThresholdDefault = 0.0f;
+    const float scoreThresholdDefault = 0.0f;
+
+    // Input: max_output_boxes_per_class (default = 0)
+    if (inputs.size() >= 3)
+    {
+        ASSERT(inputs.at(2).is_weights() && "The max_output_boxes_per_class input is required to be an initializer.",
+               ErrorCode::kUNSUPPORTED_NODE);
+        auto maxOutputBoxesPerClass = inputs.at(2).weights();
+        f.emplace_back("max_output_boxes_per_class", maxOutputBoxesPerClass.values, nvinfer1::PluginFieldType::kINT32, 1);
+    }
+    else
+    {
+        f.emplace_back("max_output_boxes_per_class", &maxOutputBoxesPerClassDefault, nvinfer1::PluginFieldType::kINT32, 1);
+    }
+
+    // Input: iou_threshold (default = 0)
+    if (inputs.size() >= 4)
+    {
+        ASSERT(inputs.at(3).is_weights() && "The iou_threshold input is required to be an initializer.",
+               ErrorCode::kUNSUPPORTED_NODE);
+        auto iouThreshold = inputs.at(3).weights();
+        f.emplace_back("iou_threshold", iouThreshold.values, nvinfer1::PluginFieldType::kFLOAT32, 1);
+    }
+    else
+    {
+        f.emplace_back("iou_threshold", &iouThresholdDefault, nvinfer1::PluginFieldType::kFLOAT32, 1);
+    }
+
+    // Input: score_threshold (default = 0)
+    if (inputs.size() >= 5)
+    {
+        ASSERT(inputs.at(4).is_weights() && "The score_threshold input is required to be an initializer.",
+               ErrorCode::kUNSUPPORTED_NODE);
+        auto scoreThreshold = inputs.at(4).weights();
+        f.emplace_back("score_threshold", scoreThreshold.values, nvinfer1::PluginFieldType::kFLOAT32, 1);
+    }
+    else
+    {
+        f.emplace_back("score_threshold", &scoreThresholdDefault, nvinfer1::PluginFieldType::kFLOAT32, 1);
+    }
+
+    // Attribute: center_point_box (default = 0)
+    const int32_t centerPointBox = OnnxAttrs{node, ctx}.get("center_point_box", 0);
+    f.emplace_back("center_point_box", &centerPointBox, nvinfer1::PluginFieldType::kINT32, 1);
+
+    // Transpose scores tensor from [batch, classes, anchors] to [batch, anchors, classes]
+    nvinfer1::Permutation perm{0, 2, 1};
+    nvinfer1::ITensor* transposedScoresTensorPtr = transposeTensor(ctx, node, *scoresTensorPtr, perm);
+    ASSERT(transposedScoresTensorPtr && "Failed to transpose the scores input.", ErrorCode::kUNSUPPORTED_NODE);
+
+    // Create plugin from registry
+    const auto plugin = createPlugin(getNodeName(node), importPluginCreator("EfficientNMS_ONNX_TRT", "1"), f);
+    ASSERT(plugin != nullptr && "EfficientNMS (ONNX support mode) plugin was not found in the plugin registry!",
+           ErrorCode::kUNSUPPORTED_NODE);
+    nvinfer1::ITensor* const inputTensorsPtr[2] = {boxesTensorPtr, transposedScoresTensorPtr};
+    auto* layer = ctx->network()->addPluginV2(inputTensorsPtr, 2, *plugin);
+    ctx->registerLayer(layer, getNodeName(node));
+    return {{layer->getOutput(0)}};
+}
+
 nvinfer1::Dims makeDims(int nbDims, int val)
 {
     // Zero all the dimensions, so that unused dimensions are deterministic even if accidentally used.
@@ -2289,12 +2370,12 @@ NodeImportResult addScatterLayer(IImporterContext* ctx, ::ONNX_NAMESPACE::NodePr
     return {{layer->getOutput(0)}};
 }
 
-//! Helper function to calculate mod(A, B)  
+//! Helper function to calculate mod(A, B)
 nvinfer1::IElementWiseLayer* modWithIntegerInputs(IImporterContext* ctx, nvinfer1::ITensor* input0, nvinfer1::ITensor* input1, bool fmod){
     using eOp = nvinfer1::ElementWiseOperation;
     auto divOp = eOp::kFLOOR_DIV;
     if (fmod) divOp = eOp::kDIV;
-    
+
     // input0 - (input1 * divOp(input0, input1))
     return ctx->network()->addElementWise(*input0,
                 *ctx->network()->addElementWise(*input1,

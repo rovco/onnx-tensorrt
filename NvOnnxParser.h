@@ -69,6 +69,30 @@ inline int32_t EnumMax<ErrorCode>()
     return 9;
 }
 
+//!
+//! \brief Represents one or more OnnxParserFlag values using binary OR
+//! operations, e.g., 1U << OnnxParserFlag::kNATIVE_INSTANCENORM
+//!
+//! \see IParser::setFlags() and IParser::getFlags()
+//!
+using OnnxParserFlags = uint32_t;
+
+enum class OnnxParserFlag : int32_t
+{
+    kLEGACY_NMS = 0
+};
+
+//!
+//! Maximum number of flags in the OnnxParserFlag enum.
+//!
+//! \see OnnxParserFlag
+//!
+template <>
+constexpr inline int32_t EnumMax<OnnxParserFlag>()
+{
+    return 1;
+}
+
 /** \class IParserError
  *
  * \brief an object containing information about an error
@@ -197,6 +221,55 @@ public:
     virtual void clearErrors() = 0;
 
     virtual ~IParser() noexcept = default;
+
+    //!
+    //! \brief Set the parser flags.
+    //!
+    //! The flags are listed in the OnnxParserFlag enum.
+    //!
+    //! \param OnnxParserFlag The flags used when parsing an ONNX model.
+    //!
+    //! \note This function will override the previous set flags, rather than bitwise ORing the new flag.
+    //!
+    //! \see getFlags()
+    //!
+    virtual void setFlags(OnnxParserFlags onnxParserFlags) noexcept = 0;
+
+    //!
+    //! \brief Get the parser flags. Defaults to 0.
+    //!
+    //! \return The parser flags as a bitmask.
+    //!
+    //! \see setFlags()
+    //!
+    virtual OnnxParserFlags getFlags() const noexcept = 0;
+
+    //!
+    //! \brief clear a parser flag.
+    //!
+    //! clears the parser flag from the enabled flags.
+    //!
+    //! \see setFlags()
+    //!
+    virtual void clearFlag(OnnxParserFlag onnxParserFlag) noexcept = 0;
+
+    //!
+    //! \brief Set a single parser flag.
+    //!
+    //! Add the input parser flag to the already enabled flags.
+    //!
+    //! \see setFlags()
+    //!
+    virtual void setFlag(OnnxParserFlag onnxParserFlag) noexcept = 0;
+
+    //!
+    //! \brief Returns true if the parser flag is set
+    //!
+    //! \see getFlags()
+    //!
+    //! \return True if flag is set, false if unset.
+    //!
+    virtual bool getFlag(OnnxParserFlag onnxParserFlag) const noexcept = 0;
 };
 
 } // namespace nvonnxparser

@@ -288,6 +288,11 @@ bool isTransposeRequired(nvinfer1::Dims const& shape, nvinfer1::Permutation cons
 NodeImportResult lstmLegacyImporter(
     IImporterContext* ctx, ::ONNX_NAMESPACE::NodeProto const& node, std::vector<TensorOrWeights>& inputs);
 
+// Helper function to use legacy EfficientNMS_ONNX_TRT plugin, which has fixed output dimensions and is conformant to ONNX.
+// Implementation copied from TRT8.0: https://github.com/onnx/onnx-tensorrt/blob/3f211d67a6b31b9c7ff0db00b0365bebee697557/builtin_op_importers.cpp#L2942C1-L2942C46
+NodeImportResult nmsPluginHelper(
+    IImporterContext* ctx, ::ONNX_NAMESPACE::NodeProto const& node, std::vector<TensorOrWeights>& inputs);
+
 // Helper function to create and fill a Dims object with defined values
 nvinfer1::Dims makeDims(int nbDims, int val);
 

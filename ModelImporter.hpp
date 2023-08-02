@@ -27,6 +27,8 @@ private:
     std::list<::ONNX_NAMESPACE::ModelProto> _onnx_models; // Needed for ownership of weights
     int _current_node;
     std::vector<Status> _errors;
+    nvonnxparser::OnnxParserFlags mOnnxParserFlags{0};
+
 
 public:
     ModelImporter(nvinfer1::INetworkDefinition* network, nvinfer1::ILogger* logger)
@@ -40,6 +42,32 @@ public:
         SubGraphCollection_t& sub_graph_collection, const char* model_path = nullptr) override;
 
     bool supportsOperator(const char* op_name) const override;
+
+    void setFlags(nvonnxparser::OnnxParserFlags onnxParserFlags) noexcept override
+    {
+        mOnnxParserFlags = onnxParserFlags;
+    }
+    nvonnxparser::OnnxParserFlags getFlags() const noexcept override
+    {
+        return mOnnxParserFlags;
+    }
+
+    void clearFlag(nvonnxparser::OnnxParserFlag onnxParserFlag) noexcept override
+    {
+        mOnnxParserFlags &= ~(1U << static_cast<uint32_t>(onnxParserFlag));
+    }
+
+    void setFlag(nvonnxparser::OnnxParserFlag onnxParserFlag) noexcept override
+    {
+        mOnnxParserFlags |= 1U << static_cast<uint32_t>(onnxParserFlag);
+    }
+
+    bool getFlag(nvonnxparser::OnnxParserFlag onnxParserFlag) const noexcept override
+    {
+        auto flag = 1U << static_cast<uint32_t>(onnxParserFlag);
+        return static_cast<bool>(mOnnxParserFlags & flag);
+    }
+
     void destroy() override
     {
         delete this;

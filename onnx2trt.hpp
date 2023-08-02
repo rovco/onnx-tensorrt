@@ -57,6 +57,9 @@ public:
     virtual nvinfer1::IErrorRecorder* getErrorRecorder() const = 0;
     virtual nvinfer1::IConstantLayer* getConstantLayer(const char* name) const = 0;
 
+    virtual void setFlags(nvonnxparser::OnnxParserFlags const& onnxParserFlags) = 0;
+    virtual nvonnxparser::OnnxParserFlags getFlags() const = 0;
+
     //! Push a new scope for base names (ONNX names).
     virtual void pushBaseNameScope() = 0;
 

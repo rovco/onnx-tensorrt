@@ -3077,6 +3077,14 @@ DEFINE_BUILTIN_OP_IMPORTER(Neg)
 
 DEFINE_BUILTIN_OP_IMPORTER(NonMaxSuppression)
 {
+    // Check flags to use legacy NMS plugin instead of INMSLayer.
+    const auto flags = ctx->getFlags();
+    const uint32_t legacyNMSFlag = 1U << static_cast<uint32_t>(nvonnxparser::OnnxParserFlag::kLEGACY_NMS);
+    if (flags & legacyNMSFlag)
+    {
+        return nmsPluginHelper(ctx, node, inputs);
+    }
+
     // max_output, iou_threshold and score_threshold are optional
     ASSERT(inputs.size() >= 2 && inputs.size() <= 5 && "The node requires between 2-5 inputs",
            ErrorCode::kUNSUPPORTED_NODE);
