@@ -144,12 +144,12 @@ endif()
 install(TARGETS
                 nvonnxparser
                 nvonnxparser_static
-        LIBRARY DESTINATION lib/x86_64-linux-gnu
-        ARCHIVE DESTINATION lib/x86_64-linux-gnu
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
 install(FILES ${HEADERS}
-  DESTINATION include/x86_64-linux-gnu
+  DESTINATION include/${CMAKE_LIBRARY_ARCHITECTURE}
 )
 
 SET(CPACK_GENERATOR "DEB")
